@@ -1,0 +1,11 @@
+/.vscode
+/0_hira.spec
+/build
+/chromedriver.exe
+/dist
+/hiraScraping.spec
+/__pycache__
+/심평원크롤링_2022_병원.csv
+/심평원크롤링_2022_상급종합병원.csv
+/심평원크롤링_2022_전문병원.csv
+/심평원크롤링_2022_종합병원.csv
