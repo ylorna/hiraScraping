@@ -1,5 +1,6 @@
 # from pydoc import doc
 # import re
+from tkinter.messagebox import NO
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -61,14 +62,15 @@ dic_specialistPart_count = { \
     "침구과" : default_value, \
     "한방재활의학과" : default_value, \
     "사상체질과" : default_value, \
-    "한방응급" : default_value, }
+    "한방응급" : default_value, \
+    "그외기타" : default_value}
 
 # dictionary value 초기화 함수
 def set_dic_value(dic_input, value):
     for dic_key in dic_input:
         dic_input[dic_key] = value
 
-browser = webdriver.Chrome() # 같은경로에 chromedriver.exe 있어야 함
+browser = webdriver.Chrome() # 같은경로에 chromedriver.exe(크롬버전과 동일한) 있어야 함
 url = "https://www.hira.or.kr/rd/hosp/getHospList.do?pgmid=HIRAA030002000000#tab01"
 browser.get(url)
 
@@ -161,7 +163,7 @@ for idx, hospital in enumerate(hospitals):
     # 기본정보 스크래핑
     # 기본정보 클릭
     # browser.find_element_by_xpath('//*[@id="container"]/div[1]/div[2]/div/div[2]/div[1]/ul/li[1]/a').click()
-    # time.sleep(0.3) # 클릭 후 데이터 로딩 대기
+    time.sleep(0.1) # 클릭 후 데이터 로딩 대기
     
     soup = BeautifulSoup(browser.page_source, "lxml")
     data_blocks = soup.find("div", attrs={"class":"section_default hosp-search-view"})
@@ -230,13 +232,21 @@ for idx, hospital in enumerate(hospitals):
         
         partName = tempText[:tempText.find('(')].strip() # 진료과목명 추출
         partNum = tempText[tempText.find('(')+1 : tempText.find(')')].strip() # 숫자 추출
-        if partNum == "0":
-            partNum = default_value
-        try:
-            dic_specialistPart_count[partName] = partNum
-        except: # dictionary에 partName key가 없을 경우
-            etcPart_num = etcPart_num + partNum
+        
+        if partName == '': # tempText에 '\n' 추출 됐을 경우
+            continue
+        
+        if partNum == '0': # 엑셀에 0값 표시되게 하고싶으면 이부분 삭제
+            continue
+            
+        if dic_specialistPart_count.get(partName) is None: # dictionary에 partName key가 없을 경우
+            etcPart_num = etcPart_num + int(partNum)
             print("{}({})은 dictionary에 없는 진료과목. (누적 미소속 전문의 수: {})",partName, partNum, etcPart_num)
+        else:
+            dic_specialistPart_count[partName] = partNum
+    # dictionary에 없는 진료과 값 
+    if etcPart_num > 0:
+        dic_specialistPart_count["그외기타"] = etcPart_num
 
     # 진료과목별 전문의 수 리스트에 추가
     hospital_data = hospital_data + list(dic_specialistPart_count.values())
