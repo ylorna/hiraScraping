@@ -102,32 +102,14 @@ try:
 except:
     browser.quit()
 
-# 스크롤 다운 프로세스
+
 # 페이지 내 스크롤있는 div class element 저장 
 itemList = browser.find_element_by_class_name("result-list-wrap")
-
 # 검색된 병원 개수 확인
-# hospital_num = browser.find_element_by_class_name("pointB").text[0:-1]
 hospital_num = browser.find_element_by_xpath('//*[@id="searchResultTitle"]/strong').text[0:-1]
 # 숫자에 따옴표(,) 있으면 제거 (따옴표 한개 있을 때만 가능)
 if hospital_num.find(',') >= 0:
     hospital_num = hospital_num[:hospital_num.find(',')] + hospital_num[hospital_num.find(',') + 1:]
-
-while True:
-    # div class 스크롤을 가장 아래로 내림
-    browser.execute_script("arguments[0].scrollBy(0, document.body.scrollHeight)", itemList)
-    # 페이지 로딩 대기
-    time.sleep(0.2)
-    # 페이지 파싱
-    soup = BeautifulSoup(browser.page_source, "lxml")
-    # 검색된 병원들 find
-    hospitals = soup.find("table", attrs={"class":"result-list"}).find("tbody").find_all("tr")
-    # 병원 개수 저장
-    curr_hospital_count = len(hospitals)
-    print("현재 병원 개수: " + str(curr_hospital_count))
-    # 병원 개수 확인하여 루프 탈출
-    if int(hospital_num) <= curr_hospital_count:
-        break
 
 # 검색된 병원들 하나하나 클릭 및 데이터 저장
 # 일반병원 버젼 타이틀 (요양병원 / 일반병원 / 치과 / 한방 네 가지 분류 타이틀 만들어야 함)
@@ -138,18 +120,23 @@ f = open(filename, "w", encoding="utf-8-sig", newline="") # 엑셀에서 한글 
 writer = csv.writer(f)
 writer.writerow(list_firstLine)
 
-# 각 병원 정보 긁어오기... 두둥
-for idx, hospital in enumerate(hospitals):
+# 각 병원 정보 긁어오기
+for idx in range(1, int(hospital_num)+1):
+    # 스크롤 내리기 idx 일의자리가 1일때마다 스크롤 내리기
+    if idx%10 == 1:
+        browser.execute_script("arguments[0].scrollBy(0, document.body.scrollHeight)", itemList)
+        
+    hospital_element = browser.find_element_by_xpath('//*[@id="hosp-form"]/div/div[2]/div[2]/div[1]/div[4]/div/table/tbody/tr[{0}]/td[1]/a'.format(idx))
     set_dic_value(dic_specialistPart_count, "") # 진료과별 전문의 수 초기화
-    hospital_name = hospital.td.get_text()
-    print("{0}. {1}".format(idx+1, hospital_name))
+    hospital_name = hospital_element.text
+    print("{0}. {1}".format(idx, hospital_name))
     
     hospital_data = list() # 병원 데이터 리스트 생성
-    hospital_data.append(str(idx+1)) # 번호 
+    hospital_data.append(str(idx)) # 번호 
     hospital_data.append(hospital_name) # 병원명   
     
     try:
-        browser.find_element_by_link_text(hospital_name).click() # 병원 클릭
+        hospital_element.click() # 병원 클릭
     except:
         print("find_element_by_link_text 에러 발생 {}".format(hospital_name))
         writer.writerow(hospital_data)
@@ -252,6 +239,7 @@ for idx, hospital in enumerate(hospitals):
     hospital_data = hospital_data + list(dic_specialistPart_count.values())
     # csv 파일에 병원 정보 쓰기    
     writer.writerow(hospital_data)
+
 
 f.close()
 time.sleep(3)
