@@ -4,6 +4,7 @@ from tkinter.messagebox import NO
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+#from selenium.webdriver.support import abstract_event_listener as AEL
 from selenium.webdriver.common.by import By
 from bs4 import BeautifulSoup
 import csv
@@ -120,13 +121,25 @@ f = open(filename, "w", encoding="utf-8-sig", newline="") # 엑셀에서 한글 
 writer = csv.writer(f)
 writer.writerow(list_firstLine)
 
+old_change_checker = "old"
+new_change_checker = "old"
+
+
 # 각 병원 정보 긁어오기
 for idx in range(1, int(hospital_num)+1):
-    # 스크롤 내리기 idx 일의자리가 1일때마다 스크롤 내리기
+    # 스크롤 내리기 (병원 10개 마다 한번 스크롤 내리기)
     if idx%10 == 1:
         browser.execute_script("arguments[0].scrollBy(0, document.body.scrollHeight)", itemList)
         
-    hospital_element = browser.find_element_by_xpath('//*[@id="hosp-form"]/div/div[2]/div[2]/div[1]/div[4]/div/table/tbody/tr[{0}]/td[1]/a'.format(idx))
+     
+
+    try: # 병원 개수 더 남았는데 클릭할 병원 elem이 없을 경우
+        hospital_element = browser.find_element_by_xpath('//*[@id="hosp-form"]/div/div[2]/div[2]/div[1]/div[4]/div/table/tbody/tr[{0}]/td[1]/a'.format(idx))
+    except: 
+        print("병원 elem 가져오기 find_element_by_xpath 에러발생")
+        break
+        
+    
     set_dic_value(dic_specialistPart_count, "") # 진료과별 전문의 수 초기화
     hospital_name = hospital_element.text
     print("{0}. {1}".format(idx, hospital_name))
@@ -135,14 +148,45 @@ for idx in range(1, int(hospital_num)+1):
     hospital_data.append(str(idx)) # 번호 
     hospital_data.append(hospital_name) # 병원명   
     
+    # try:
+    #     hospital_element.click() # 병원 클릭
+    # except:
+    #     print("find_element_by_xpath 에러 발생 {}".format(hospital_name))
+    #     writer.writerow(hospital_data)
+    #     continue
+    # time.sleep(0.5)
+    
     try:
         hospital_element.click() # 병원 클릭
     except:
-        print("find_element_by_link_text 에러 발생 {}".format(hospital_name))
+        print("병원 클릭 find_element_by_xpath 에러 발생 {}".format(hospital_name))
         writer.writerow(hospital_data)
-        continue
+        continue        
     
-    # 클릭 후 데이터 로딩 최대 10초 대기
+    time.sleep(0.4)
+    
+    loop_counter = 0
+    
+    while True:
+        try:
+            new_change_checker = browser.find_element_by_xpath('//*[@id="container"]/div[1]/div[2]/div/div[2]/div[2]/div[1]/table[1]/tbody/tr[1]/td[1]').text
+        except:
+            print("병원정보 로딩 대기...(find_element_by_xpath 에러)")
+            new_change_checker = old_change_checker
+        
+        if old_change_checker != new_change_checker:
+            old_change_checker = new_change_checker
+            break
+        elif loop_counter > 100:
+            print("loop count 초과로 Break")
+            break
+        else:
+            print("병원정보 로딩 대기...")
+            loop_counter+=1
+            time.sleep(0.05)
+    
+    
+    # 클릭 후 데이터 로딩 최대 10초 대기 -> 연속으로 같은 이름병원 나올 경우 wait 하지 않고 중복된 데이터 파싱함
     try:
         WebDriverWait(browser,10).until(EC.text_to_be_present_in_element((By.ID,'hospNm'),hospital_name))
     except:
