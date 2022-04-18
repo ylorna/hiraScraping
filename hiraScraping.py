@@ -121,6 +121,7 @@ f = open(filename, "w", encoding="utf-8-sig", newline="") # 엑셀에서 한글 
 writer = csv.writer(f)
 writer.writerow(list_firstLine)
 
+# change checker로 병원 주소 사용
 old_change_checker = "old"
 new_change_checker = "old"
 
@@ -167,11 +168,12 @@ for idx in range(1, int(hospital_num)+1):
     
     loop_counter = 0
     
+    #병원 클릭 후 병원 정보 시현 됐는지 확인하는 프로세스 (병원 주소를 비교)
     while True:
-        try:
+        try: 
             new_change_checker = browser.find_element_by_xpath('//*[@id="container"]/div[1]/div[2]/div/div[2]/div[2]/div[1]/table[1]/tbody/tr[1]/td[1]').text
         except:
-            print("병원정보 로딩 대기...(find_element_by_xpath 에러)")
+            print("병원정보 로딩 대기...(find_element_by_xpath)") # 타이밍 안맞아서 정보 미시현 될 때 find 하면 element 못 찾음
             new_change_checker = old_change_checker
         
         if old_change_checker != new_change_checker:
